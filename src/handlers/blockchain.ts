@@ -2,7 +2,7 @@ import { Client, IMap } from "hazelcast-client";
 import crypto from "crypto-js";
 import { Block } from "../interfaces"
 
-export class Chain {
+export class ChainHandler {
  static client: Client;
  static map: IMap<string, Block>;
  
@@ -61,5 +61,9 @@ export class Chain {
   return Promise.resolve(
    all.map(([, b]) => b)
   );
+ }
+
+ static close() {
+  this.client.shutdown();
  }
 }

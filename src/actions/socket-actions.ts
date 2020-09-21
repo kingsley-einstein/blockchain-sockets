@@ -1,0 +1,5 @@
+export enum SocketActions {
+ NEW_BLOCK_ADDED = "NEW_BLOCK_ADDED",
+ NEW_NODE_JOINED = "NEW_NODE_JOINED",
+ GET_CHAIN = "GET_CHAIN"
+}

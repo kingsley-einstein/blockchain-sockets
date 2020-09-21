@@ -18,4 +18,15 @@ export class NodeHandler {
  static async removeNode(id: string): Promise<void> {
   await this.map.delete(id);
  }
+
+ static async getNodes(): Promise<Array<Node>> {
+  const all = await this.map.entrySet();
+  return Promise.resolve(
+   all.map(([, n]) => n)
+  );
+ }
+
+ // static close() {
+ //  this.client.shutdown();
+ // }
 }
