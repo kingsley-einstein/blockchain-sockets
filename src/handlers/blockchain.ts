@@ -1,6 +1,6 @@
-import { Client, IMap, Config } from "hazelcast-client";
-import { Block } from "../interfaces"
+import { Client, IMap } from "hazelcast-client";
 import crypto from "crypto-js";
+import { Block } from "../interfaces"
 
 export class Chain {
  static client: Client;
@@ -45,14 +45,21 @@ export class Chain {
   const all = (await this.map.entrySet());
   for (let i = 1; i < all.length; i++) {
    const [, currentBlock] = all[i];
-   const [, previousBlock] = all[i -1];
+   const [, previousBlock] = all[i - 1];
 
-   if (currentBlock.hash === (await this.calculateHash(currentBlock)).hash)
-    return Promise.resolve(true);
+   if (currentBlock.hash !== (await this.calculateHash(currentBlock)).hash)
+    return Promise.resolve(false);
    
-   if (currentBlock.previousHash === previousBlock.hash)
+   if (currentBlock.previousHash !== previousBlock.hash)
     return Promise.resolve(false);
   }
   return Promise.resolve(true);
+ }
+
+ static async getChain(): Promise<Array<Block>> {
+  const all = await this.map.entrySet();
+  return Promise.resolve(
+   all.map(([, b]) => b)
+  );
  }
 }

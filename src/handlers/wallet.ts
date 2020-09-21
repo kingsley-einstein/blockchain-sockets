@@ -41,4 +41,21 @@ export class WalletHandler {
   const w = await this.map.put(wallet.address, wallet);
   return Promise.resolve(w);
  }
+
+ static async getWallet(address: string): Promise<Wallet> {
+  const wallet: Wallet = await this.map.get(address);
+  return Promise.resolve(wallet);
+ }
+
+ static async updateWalletBalance(address: string, amount: number): Promise<Wallet> {
+  const wallet: Wallet = await this.map.get(address);
+  const newWallet = wallet;
+  newWallet.balance = newWallet.balance + amount;
+  const updatedWallet = await this.map.put(address, newWallet);
+  return Promise.resolve(updatedWallet);
+ }
+
+ static async deleteWallet(address: string): Promise<void> {
+  await this.map.delete(address);
+ }
 }
