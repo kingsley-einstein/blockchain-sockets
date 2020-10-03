@@ -38,4 +38,31 @@ export class TransactionHandler {
 
   return Promise.resolve(pendingTxs);
  }
+
+ static async getDeclinedTxs(): Promise<Array<Transaction>> {
+  const declinedTxs = (await this.map.entrySet())
+   .map(([, tx]) => tx)
+   .filter((tx) => tx.txStatus === "declined");
+
+  return Promise.resolve(declinedTxs);
+ }
+
+ static async getAcceptedTxs(): Promise<Array<Transaction>> {
+  const acceptedTxs = (await this.map.entrySet())
+   .map(([, tx]) => tx)
+   .filter((tx) => tx.txStatus === "successful");
+
+  return Promise.resolve(acceptedTxs);
+ }
+
+ static async getAllTxs(): Promise<Array<Transaction>> {
+  const allTxs = (await this.map.entrySet())
+   .map(([, tx]) => tx);
+
+  return Promise.resolve(allTxs);
+ }
+
+ static async close() {
+  this.client.shutdown();
+ }
 }

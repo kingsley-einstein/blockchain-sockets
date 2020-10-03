@@ -1,6 +1,10 @@
 import express from "express";
-import { WalletHandler } from "../handlers";
+import { v4 as uuid } from "uuid";
+import { WalletHandler, TransactionHandler } from "../handlers";
+import { Transaction } from "../interfaces";
 import { CustomError } from "../custom";
+import { SocketActions } from "../actions";
+import { p2p } from "..";
 
 export class WalletController {
  static async create(req: express.Request, res: express.Response) {
@@ -125,8 +129,11 @@ export class WalletController {
 
  static async sendBalance(req: express.Request, res: express.Response) {
   try {
-   // Open connection
+   // Open wallet connection
    await WalletHandler.init();
+
+   // Open tx connection
+   await TransactionHandler.init();
 
    // Get request parameters
    const { fromAddress, toAddress, balance } = req.params;
@@ -134,11 +141,47 @@ export class WalletController {
    // Sender
    const senderWallet = await WalletHandler.getWallet(fromAddress);
 
+   if (!senderWallet)
+    throw new CustomError(404, "Wallet not found.");
+
    // Receiver
    const receiverWallet = await WalletHandler.getWallet(toAddress);
 
+   if (!receiverWallet)
+    throw new CustomError(404, "Wallet not found.");
+
    if (senderWallet.balance < parseInt(balance))
     throw new CustomError(404, "Balance not sufficient");
-  } catch (error) {}
+
+   const newTx: Transaction = {
+    txId: uuid(),
+    txFee: { address: senderWallet.address, value: req.body.fee },
+    txHash: "",
+    txStatus: "pending",
+    txInputs: [{ address: senderWallet.address, value: req.body.balance }],
+    txOutputs: [{ address: receiverWallet.address, value: req.body.balance }]
+   };
+
+   const addedTxs = await TransactionHandler.createTx(newTx);
+
+   // Close wallet connection
+   await WalletHandler.close();
+
+   // Close tx connection
+   await TransactionHandler.close();
+
+   // Broadcast the transaction to all nodes
+   p2p.broadcast(SocketActions.NEW_TRANSACTION, addedTxs);
+
+   res.status(200).json({
+    statusCode: 200,
+    response: addedTxs
+   })
+  } catch (error) {
+   res.status(error.errorCode || 500).json({
+    statusCode: error.errorCode || 500,
+    response: error.message
+   });
+  }
  }
 }
