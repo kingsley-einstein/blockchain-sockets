@@ -63,7 +63,7 @@ export class ChainHandler {
   );
  }
 
- static close() {
+ static async close() {
   this.client.shutdown();
  }
 }

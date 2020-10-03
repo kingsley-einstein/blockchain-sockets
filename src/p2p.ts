@@ -1,41 +1,40 @@
 import io from "socket.io";
 import http from "http";
+import { v4 as uuid } from "uuid";
 import { SocketActions } from "./actions";
-import { NodeHandler, ChainHandler } from "./handlers";
+import { ChainHandler } from "./handlers";
 
 export class P2P {
- _: io.Server;
-
- async initHandlers() {
-  await NodeHandler.init();
-  await ChainHandler.init();
+ s: io.Server;
+ constructor(server: http.Server) {
+  this.s = io(server);
+  this.listen();
  }
 
- async init(server: http.Server) {
-  
-  this._ = io(server);
+ private listen() {
+  this.s.on("connect", async (socket) => {
+   // Open connection
+   await ChainHandler.init();
 
-  await this.initHandlers();
-
-  this._.on("connect", async (client) => {
-   this.clientBroadcast(client, SocketActions.NEW_NODE_JOINED, (await NodeHandler.addNode(client.id)));
-   this.broadcastTo(client, SocketActions.GET_CHAIN, (await ChainHandler.getChain()));
+   this.clientBroadcast(socket, SocketActions.NEW_NODE_JOINED, {
+    nodeId: socket.id + ":" + uuid()
+   });
+   this.broadcastTo(socket, SocketActions.GET_CHAIN, (await ChainHandler.getChain()));
+   
+   // Close connection
+   await ChainHandler.close();
   });
  }
 
- broadcast(event: SocketActions, data?: any) {
-  return this._.emit(event, data);
+ private clientBroadcast(s: io.Socket, ev: SocketActions, data?: any) {
+  return s.broadcast.emit(ev, data);
  }
 
- private clientBroadcast(client: io.Socket, event: SocketActions, data?: any) {
-  return client.broadcast.emit(event, data);
+ private broadcastTo(s: io.Socket, ev: SocketActions, data?: any) {
+  return this.s.to(s.id).emit(ev, data);
  }
 
- private broadcastTo(client: io.Socket, event: SocketActions, data?: any) {
-  return this._.to(client.id).emit(event, data);
- }
-
- public getNodes() {
-  return NodeHandler.getNodes();
+ broadcast(ev: SocketActions, data?: any) {
+  return this.s.emit(ev, data);
  }
 }

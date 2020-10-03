@@ -47,6 +47,15 @@ export class WalletHandler {
   return Promise.resolve(wallet);
  }
 
+ static async importWallet(phrase: string): Promise<Wallet> {
+  const keyPair = await this.generateKeyPair(phrase);
+  const wallet: Wallet = (await this.map.entrySet())
+   .map(([, w]) => w)
+   .find((w) => w.privateKey === keyPair.privateKey);
+
+  return Promise.resolve(wallet);
+ }
+
  static async updateWalletBalance(address: string, amount: number): Promise<Wallet> {
   const wallet: Wallet = await this.map.get(address);
   const newWallet = wallet;
@@ -57,5 +66,9 @@ export class WalletHandler {
 
  static async deleteWallet(address: string): Promise<void> {
   await this.map.delete(address);
+ }
+
+ static async close() {
+  this.client.shutdown();
  }
 }
