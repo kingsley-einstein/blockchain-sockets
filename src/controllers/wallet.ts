@@ -123,5 +123,22 @@ export class WalletController {
   }
  }
 
- static async rewardWallet() {}
+ static async sendBalance(req: express.Request, res: express.Response) {
+  try {
+   // Open connection
+   await WalletHandler.init();
+
+   // Get request parameters
+   const { fromAddress, toAddress, balance } = req.params;
+   
+   // Sender
+   const senderWallet = await WalletHandler.getWallet(fromAddress);
+
+   // Receiver
+   const receiverWallet = await WalletHandler.getWallet(toAddress);
+
+   if (senderWallet.balance < parseInt(balance))
+    throw new CustomError(404, "Balance not sufficient");
+  } catch (error) {}
+ }
 }

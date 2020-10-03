@@ -1,17 +1,19 @@
 import express from "express";
 import http from "http";
+import debug from "debug";
 import { P2P } from "./p2p";
 import { nodes } from "./middleware";
 
 const app: express.Application = express();
-const p2p = new P2P();
+const server: http.Server = http.createServer(app);
+const p2p = new P2P(server);
+const log = debug("app");
+const port = parseInt(process.env.PORT || "4567");
 
 app.use(nodes(p2p));
 
-const server: http.Server = http.createServer(app);
-
-server.listen(4567, async () => {
- await p2p.init(server);
+server.listen(port, () => {
+ log(`Server running on ${port}`);
 });
 
 export { p2p, app };
