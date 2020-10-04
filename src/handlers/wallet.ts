@@ -1,5 +1,5 @@
-import crypto from "crypto";
-import * as crypto2 from "crypto-js";
+import * as crypto from "crypto-js";
+import { v4 as uuid } from "uuid";
 import { Client, IMap } from "hazelcast-client";
 import { Wallet } from "../interfaces";
 
@@ -14,31 +14,26 @@ export class WalletHandler {
 
  private static async generateKeyPair(passphrase: string) {
   return Promise.resolve(
-   crypto.generateKeyPairSync("rsa", {
-    modulusLength: 500,
-    publicKeyEncoding: {
-     type: "spki",
-     format: "pem"
-    },
-    privateKeyEncoding: {
-     type: "pkcs8",
-     format: "pem",
-     cipher: "aes-256-cbc",
-     passphrase
-    }
-   })
+   {
+    privateKey: crypto.SHA256(passphrase).toString(),
+    publicKey: crypto.SHA256(uuid()).toString()
+   }
   );
  }
 
  static async createWallet(phrase: string): Promise<Wallet> {
   const keyPair = await this.generateKeyPair(phrase);
+  console.log(keyPair.privateKey, keyPair.publicKey);
   const wallet: Wallet = {
    privateKey: keyPair.privateKey,
    publicKey: keyPair.publicKey,
-   address: crypto2.SHA256(keyPair.publicKey + keyPair.privateKey).toString(),
+   address: crypto.SHA256(keyPair.publicKey + keyPair.privateKey).toString() + ":" + uuid(),
    balance: 0   
   };
-  const w = await this.map.put(wallet.address, wallet);
+
+  await this.map.put(wallet.address, wallet);
+
+  const w: Wallet = await this.map.get(wallet.address);
   return Promise.resolve(w);
  }
 

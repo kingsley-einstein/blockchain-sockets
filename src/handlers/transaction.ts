@@ -25,8 +25,11 @@ export class TransactionHandler {
  }
 
  static async createTx(tx: Transaction): Promise<Transaction> {
-  const t: Transaction = await this.calculateTxHash(tx);
-  const t2: Transaction = await this.map.put(t.txId, t);
+  const t: Transaction = await this.calculateTxHash({ ...tx, txSignature: null });
+  
+  await this.map.put(t.txId, t);
+
+  const t2: Transaction = await this.map.get(t.txId);
   
   return Promise.resolve(t2);
  }
@@ -50,7 +53,7 @@ export class TransactionHandler {
  static async getAcceptedTxs(): Promise<Array<Transaction>> {
   const acceptedTxs = (await this.map.entrySet())
    .map(([, tx]) => tx)
-   .filter((tx) => tx.txStatus === "successful");
+   .filter((tx) => tx.txStatus === "approved");
 
   return Promise.resolve(acceptedTxs);
  }
@@ -60,6 +63,13 @@ export class TransactionHandler {
    .map(([, tx]) => tx);
 
   return Promise.resolve(allTxs);
+ }
+
+ static async approveTx(tx: Transaction): Promise<Transaction> {
+  tx.txStatus = "approved";
+  const tx2: Transaction = await this.map.put(tx.txId, tx);
+
+  return Promise.resolve(this.map.get(tx2.txId));
  }
 
  static async close() {
