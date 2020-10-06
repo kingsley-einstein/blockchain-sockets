@@ -1,6 +1,7 @@
 import { Client, IMap } from "hazelcast-client";
 import crypto from "crypto-js";
 import { Block } from "../interfaces"
+import { min } from "hazelcast-client/lib/aggregation/Aggregators";
 
 export class ChainHandler {
  static client: Client;
@@ -9,6 +10,29 @@ export class ChainHandler {
  static async init() {
   this.client = await Client.newHazelcastClient();
   this.map = await this.client.getMap("chain");
+
+  const b = await this.calculateHash({
+   hash: "",
+   previousHash: "",
+   timestamp: new Date(Date.now()),
+   transaction: null,
+   index: 1,
+   nonce: 0
+  });
+
+  const genesisBlock = await this.createGenesisBlock(b);
+
+  console.log({ ...genesisBlock });
+ }
+
+ private static async createGenesisBlock(b: Block): Promise<Block> {
+  if ((await this.map.isEmpty())) {
+   await this.map.put(b.hash, b, 0);
+   return Promise.resolve(this.map.get(b.hash));
+  }
+  return Promise.resolve((
+   await this.map.entrySet()
+  ).map(([, block]) => block)[0]);
  }
 
  private static async calculateHash(b: Block): Promise<Block> {
@@ -28,17 +52,21 @@ export class ChainHandler {
  }
 
  static async addBlock(difficulty: number, data: any): Promise<Block> {
-  const allKeys = (await this.map.keySet())
+  const chain = (await this.map.entrySet())
+   .map(([, b]) => b);
   const block: Block = await this.calculateHash({
-   index: (await this.map.get(allKeys[allKeys.length - 1])).index + 1,
+   index: chain[chain.length - 1].index + 1,
    timestamp: new Date(Date.now()),
-   previousHash: (await this.map.get(allKeys[allKeys.length - 1])).hash,
+   previousHash: chain[chain.length - 1].hash,
    nonce: 0,
    hash: "",
    transaction: data.transaction
   });
-  const addedBlock = await this.mineBlock(difficulty, block);
-  return Promise.resolve(addedBlock);
+  const minedBlock = await this.mineBlock(difficulty, block);
+
+  await this.map.put(minedBlock.hash, minedBlock, 0);
+
+  return Promise.resolve(this.map.get(minedBlock.hash));
  }
 
  static async isChainValid(): Promise<boolean> {
@@ -64,6 +92,6 @@ export class ChainHandler {
  }
 
  static async close() {
-  this.client.shutdown();
+  await this.client.shutdown();
  }
 }

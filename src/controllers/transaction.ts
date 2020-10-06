@@ -61,4 +61,56 @@ export class TransactionController {
    });
   }
  }
+
+ static async getAllTransactionsByInput(req: express.Request, res: express.Response) {
+  try {
+   // Open connection
+   await TransactionHandler.init();
+
+   // Get address
+   const { address } = req.params;
+
+   // Find transactions
+   const txs = await TransactionHandler.getAllTxsByInputAddress(address);
+
+  // Close connection
+  await TransactionHandler.close();
+
+  res.status(200).json({
+   statusCode: 200,
+   response: txs
+  });
+  } catch (error) {
+   res.status(500).json({
+    statusCode: 500,
+    response: error.message
+   });
+  }
+ }
+
+ static async getAllTransactionsByOutput(req: express.Request, res: express.Response) {
+  try {
+   // Open connection
+   await TransactionHandler.init();
+
+   // Get address
+   const { address } = req.params;
+
+   // Find transactions
+   const txs = await TransactionHandler.getAllTxsByOutputAddress(address);
+
+  // Close connection
+  await TransactionHandler.close();
+
+  res.status(200).json({
+   statusCode: 200,
+   response: txs
+  });
+  } catch (error) {
+   res.status(500).json({
+    statusCode: 500,
+    response: error.message
+   });
+  }
+ }
 }

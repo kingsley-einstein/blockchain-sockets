@@ -31,7 +31,7 @@ export class WalletHandler {
    balance: 0   
   };
 
-  await this.map.put(wallet.address, wallet);
+  await this.map.put(wallet.address, wallet, 0);
 
   const w: Wallet = await this.map.get(wallet.address);
   return Promise.resolve(w);
@@ -55,7 +55,7 @@ export class WalletHandler {
   const wallet: Wallet = await this.map.get(address);
   const newWallet = wallet;
   newWallet.balance = newWallet.balance + amount;
-  const updatedWallet = await this.map.put(address, newWallet);
+  const updatedWallet = await this.map.put(address, newWallet, 0);
   return Promise.resolve(updatedWallet);
  }
 
@@ -64,6 +64,6 @@ export class WalletHandler {
  }
 
  static async close() {
-  this.client.shutdown();
+  await this.client.shutdown();
  }
 }
