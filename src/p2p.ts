@@ -3,7 +3,7 @@ import http from "http";
 import debug from "debug";
 import { v4 as uuid } from "uuid";
 import { SocketActions } from "./actions";
-import { ChainHandler } from "./handlers";
+import { BChainHandler } from "./handlers";
 
 const log = debug("p2p");
 
@@ -22,13 +22,13 @@ export class P2P {
    log(`Node connected: ${nodeId}`);
 
    // Open connection
-   await ChainHandler.init();
+   // await ChainHandler.init();
 
    this.clientBroadcast(socket, SocketActions.NEW_NODE_JOINED, { nodeId });
-   this.broadcastTo(socket, SocketActions.GET_CHAIN, (await ChainHandler.getChain()));
+   // this.broadcastTo(socket, SocketActions.GET_CHAIN, (await ChainHandler.getChain()));
    
    // Close connection
-   await ChainHandler.close();
+   // await ChainHandler.close();
   });
  }
 

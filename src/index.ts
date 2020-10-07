@@ -3,6 +3,7 @@ import http from "http";
 import debug from "debug";
 import { P2P } from "./p2p";
 import config from "./config";
+import { FS } from "./helpers";
 // import { nodes } from "./middleware";
 
 let app: express.Application = express();
@@ -17,6 +18,10 @@ app = config(app);
 
 server.listen(port, () => {
  log(`Server running on ${port}`);
+ FS.fileWrite("block.data", {
+  r: ["Abe Truro"]
+ });
+ console.log(FS.fileRead("block.data"));
 });
 
 export { p2p, app };
