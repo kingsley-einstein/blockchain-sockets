@@ -1,17 +1,18 @@
 import { Client, IMap } from "hazelcast-client";
 import crypto from "crypto-js";
+import { FS } from "../helpers";
 import { Transaction, Wallet } from "../interfaces";
 
-export class TransactionHandler {
- static client: Client;
- static map: IMap<string, Transaction>;
+const txsFile = "transactions.data";
 
- static async init() {
-  this.client = await Client.newHazelcastClient();
-  this.map = await this.client.getMap("transactions");
+export class TransactionHandler {
+ map: IMap<string, Transaction>;
+
+ async define(c: Client) {
+  this.map = await c.getMap("transactions");
  }
 
- private static calculateTxHash(tx: Transaction): Promise<Transaction> {
+ private calculateTxHash(tx: Transaction): Promise<Transaction> {
   tx.txHash = crypto.SHA256(
    JSON.stringify(tx.txInputs) + 
    JSON.stringify(tx.txOutputs) + 
@@ -24,38 +25,59 @@ export class TransactionHandler {
   return Promise.resolve(tx);
  }
 
- private static async signTx(tx: Transaction, w: Wallet): Promise<Transaction> {
+ private async signTx(tx: Transaction, w: Wallet): Promise<Transaction> {
   tx.txSignature = crypto.SHA256(JSON.stringify(tx.txInputs) + JSON.stringify(tx.txOutputs) + tx.txStatus + tx.txHash + w.privateKey)
    .toString();
 
   return Promise.resolve(tx);
  }
 
- static async createTx(tx: Transaction): Promise<Transaction> {
+ async createTx(tx: Transaction): Promise<Transaction> {
   const t: Transaction = await this.calculateTxHash({ ...tx, txSignature: null });
   
   await this.map.put(t.txId, t, 0);
 
+  let txsFromFile: Array<Transaction> = JSON.parse((<string> FS.fileRead(txsFile)));
+
   const t2: Transaction = await this.map.get(t.txId);
+
+  txsFromFile = [...txsFromFile, t2];
+
+  FS.fileWrite(txsFile, JSON.stringify(txsFromFile));
   
   return Promise.resolve(t2);
  }
 
- static async getTx(txId: string): Promise<Transaction> {
+ async getTx(txId: string): Promise<Transaction> {
+  const txsFromFile: Array<Transaction> = JSON.parse((<string> FS.fileRead(txsFile)));
+
+  for (const tx of txsFromFile)
+   await this.map.put(tx.txId, tx, 0);
+  
   return Promise.resolve(
    this.map.get(txId)
   );
  }
 
- static async getPendingTxs(): Promise<Array<Transaction>> {
-  const pendingTxs = (await this.map.entrySet())
+ async getPendingTxs(): Promise<Array<Transaction>> {
+  const txsFromFile: Array<Transaction> = JSON.parse((<string> FS.fileRead(txsFile)));
+  
+  for (const tx of txsFromFile)
+   await this.map.put(tx.txId, tx, 0);
+  
+   const pendingTxs = (await this.map.entrySet())
    .map(([, tx]) => tx)
    .filter((tx) => tx.txStatus === "pending");
 
   return Promise.resolve(pendingTxs);
  }
 
- static async getDeclinedTxs(): Promise<Array<Transaction>> {
+ async getDeclinedTxs(): Promise<Array<Transaction>> {
+  const txsFromFile: Array<Transaction> = JSON.parse((<string> FS.fileRead(txsFile)));
+  
+  for (const tx of txsFromFile)
+   await this.map.put(tx.txId, tx, 0);
+  
   const declinedTxs = (await this.map.entrySet())
    .map(([, tx]) => tx)
    .filter((tx) => tx.txStatus === "declined");
@@ -63,7 +85,12 @@ export class TransactionHandler {
   return Promise.resolve(declinedTxs);
  }
 
- static async getAcceptedTxs(): Promise<Array<Transaction>> {
+ async getAcceptedTxs(): Promise<Array<Transaction>> {
+  const txsFromFile: Array<Transaction> = JSON.parse((<string> FS.fileRead(txsFile)));
+  
+  for (const tx of txsFromFile)
+   await this.map.put(tx.txId, tx, 0);
+  
   const acceptedTxs = (await this.map.entrySet())
    .map(([, tx]) => tx)
    .filter((tx) => tx.txStatus === "approved");
@@ -71,22 +98,42 @@ export class TransactionHandler {
   return Promise.resolve(acceptedTxs);
  }
 
- static async getAllTxs(): Promise<Array<Transaction>> {
+ async getAllTxs(): Promise<Array<Transaction>> {
+  const txsFromFile: Array<Transaction> = JSON.parse((<string> FS.fileRead(txsFile)));
+  
+  for (const tx of txsFromFile)
+   await this.map.put(tx.txId, tx, 0);
+  
   const allTxs = (await this.map.entrySet())
    .map(([, tx]) => tx);
 
   return Promise.resolve(allTxs);
  }
 
- static async approveTx(tx: Transaction, w: Wallet): Promise<Transaction> {
+ async approveTx(tx: Transaction, w: Wallet): Promise<Transaction> {
+  let txsFromFile: Array<Transaction> = JSON.parse((<string> FS.fileRead(txsFile)));
+
+  for (const tx of txsFromFile)
+   await this.map.put(tx.txId, tx, 0);
+  
   tx.txStatus = "approved";
   const tx1 = await this.signTx(tx, w);
   const tx2: Transaction = await this.map.put(tx1.txId, tx1, 0);
 
+  txsFromFile = txsFromFile.filter((t) => t.txId !== tx.txId);
+  txsFromFile = [...txsFromFile, tx2];
+
+  FS.fileWrite(txsFile, JSON.stringify(txsFile));
+
   return Promise.resolve(this.map.get(tx2.txId));
  }
 
- static async getAllTxsByInputAddress(address: string): Promise<Array<Transaction>> {
+ async getAllTxsByInputAddress(address: string): Promise<Array<Transaction>> {
+  const txsFromFile: Array<Transaction> = JSON.parse((<string> FS.fileRead(txsFile)));
+
+  for (const tx of txsFromFile)
+   await this.map.put(tx.txId, tx, 0);
+  
   const allTxsByAddress = (await this.map.entrySet())
    .map(([, tx]) => tx)
    .filter((tx) => {
@@ -96,7 +143,12 @@ export class TransactionHandler {
   return Promise.resolve(allTxsByAddress);
  }
 
- static async getAllTxsByOutputAddress(address: string): Promise<Array<Transaction>> {
+ async getAllTxsByOutputAddress(address: string): Promise<Array<Transaction>> {
+  const txsFromFile: Array<Transaction> = JSON.parse((<string> FS.fileRead(txsFile)));
+
+  for (const tx of txsFromFile)
+   await this.map.put(tx.txId, tx, 0);
+  
   const allTxsByAddress = (await this.map.entrySet())
    .map(([, tx]) => tx)
    .filter((tx) => {
@@ -104,9 +156,5 @@ export class TransactionHandler {
    });
 
   return Promise.resolve(allTxsByAddress);
- }
-
- static async close() {
-  await this.client.shutdown();
  }
 }
