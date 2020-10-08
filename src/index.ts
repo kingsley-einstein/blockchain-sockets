@@ -18,10 +18,7 @@ app = config(app);
 
 server.listen(port, () => {
  log(`Server running on ${port}`);
- FS.fileWrite("block.data", {
-  r: ["Abe Truro"]
- });
- console.log(FS.fileRead("block.data"));
+ FS.fileWrite("blocks.data", JSON.stringify([]));
 });
 
 export { p2p, app };

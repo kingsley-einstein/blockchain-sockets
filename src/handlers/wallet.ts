@@ -1,18 +1,17 @@
 import * as crypto from "crypto-js";
 import { v4 as uuid } from "uuid";
 import { Client, IMap } from "hazelcast-client";
+import { FS } from "../helpers";
 import { Wallet } from "../interfaces";
 
 export class WalletHandler {
- static client: Client;
- static map: IMap<string, Wallet>;
+ private map: IMap<string, Wallet>;
 
- static async init() {
-  this.client = await Client.newHazelcastClient();
-  this.map = await this.client.getMap("wallets");
+ async define(c: Client) {
+  this.map = await c.getMap("wallets");
  }
 
- private static async generateKeyPair(passphrase: string) {
+ private async generateKeyPair(passphrase: string) {
   return Promise.resolve(
    {
     privateKey: crypto.SHA256(passphrase).toString(),
@@ -21,9 +20,11 @@ export class WalletHandler {
   );
  }
 
- static async createWallet(phrase: string): Promise<Wallet> {
+ async createWallet(phrase: string): Promise<Wallet> {
   const keyPair = await this.generateKeyPair(phrase);
-  console.log(keyPair.privateKey, keyPair.publicKey);
+  
+  // console.log(keyPair.privateKey, keyPair.publicKey);
+  
   const wallet: Wallet = {
    privateKey: keyPair.privateKey,
    publicKey: keyPair.publicKey,
@@ -34,16 +35,35 @@ export class WalletHandler {
   await this.map.put(wallet.address, wallet, 0);
 
   const w: Wallet = await this.map.get(wallet.address);
+  
+  let walletsFromFile: Array<Wallet> = JSON.parse((<string> FS.fileRead("wallets.data")));
+
+  walletsFromFile = [...walletsFromFile, w];
+
+  FS.fileWrite("wallets.data", JSON.stringify(walletsFromFile));
+
   return Promise.resolve(w);
  }
 
- static async getWallet(address: string): Promise<Wallet> {
+ async getWallet(address: string): Promise<Wallet> {
+  const walletsFromFile: Array<Wallet> = JSON.parse((<string> FS.fileRead("wallets.data")));
+
+  for (const w of walletsFromFile)
+   await this.map.put(w.address, w, 0);
+
   const wallet: Wallet = await this.map.get(address);
+  
   return Promise.resolve(wallet);
  }
 
- static async importWallet(phrase: string): Promise<Wallet> {
+ async importWallet(phrase: string): Promise<Wallet> {
   const keyPair = await this.generateKeyPair(phrase);
+  
+  const walletsFromFile: Array<Wallet> = JSON.parse((<string>FS.fileRead("wallets.data")));
+
+  for (const w of walletsFromFile)
+   await this.map.put(w.address, w);
+  
   const wallet: Wallet = (await this.map.entrySet())
    .map(([, w]) => w)
    .find((w) => w.privateKey === keyPair.privateKey);
@@ -51,19 +71,30 @@ export class WalletHandler {
   return Promise.resolve(wallet);
  }
 
- static async updateWalletBalance(address: string, amount: number): Promise<Wallet> {
+ async updateWalletBalance(address: string, amount: number): Promise<Wallet> {
+  let walletsFromFile: Array<Wallet> = JSON.parse((<string> FS.fileRead("wallets.data")));
+
+  const wFF = walletsFromFile.find((item) => item.address === address);
+  wFF.balance = wFF.balance + amount;
+  walletsFromFile = walletsFromFile.filter((w) => w.address !== address);
+  walletsFromFile = [...walletsFromFile, wFF];
+
+  FS.fileWrite("wallets.data", JSON.stringify(walletsFromFile));
+
+  for (const w of walletsFromFile)
+   await this.map.put(w.address, w);
+
   const wallet: Wallet = await this.map.get(address);
-  const newWallet = wallet;
-  newWallet.balance = newWallet.balance + amount;
-  const updatedWallet = await this.map.put(address, newWallet, 0);
-  return Promise.resolve(updatedWallet);
+
+  return Promise.resolve(wallet);
  }
 
- static async deleteWallet(address: string): Promise<void> {
+ async deleteWallet(address: string): Promise<void> {
+  let walletsFromFile: Array<Wallet> = JSON.parse((<string> FS.fileRead("wallets.data")));
+
+  walletsFromFile = walletsFromFile.filter((w) => w.address === address);
+
+  FS.fileWrite("wallets.data", JSON.stringify(walletsFromFile));
   await this.map.delete(address);
- }
-
- static async close() {
-  await this.client.shutdown();
  }
 }
