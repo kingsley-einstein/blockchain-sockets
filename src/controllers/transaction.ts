@@ -1,18 +1,12 @@
 import express from "express";
 import { v4 as uuid } from "uuid";
-import { WalletHandler, TransactionHandler } from "../handlers";
+import { Wallet, TX } from "../cache";
 import { Transaction } from "../interfaces";
 import { CustomError } from "../custom";
 
 export class TransactionController {
  static async create(req: express.Request, res: express.Response) {
   try {
-   // Open transaction connection
-   await TransactionHandler.init();
-
-   // Open wallet connection
-   await WalletHandler.init();
-
    const tx: Transaction = {
     txId: uuid(),
     txInputs: req.body.txInputs,
@@ -24,7 +18,7 @@ export class TransactionController {
 
    // Check transaction inputs
    for (const input of tx.txInputs) {
-    const w = await WalletHandler.getWallet(input.address);
+    const w = await Wallet.getWallet(input.address);
 
     if (!w)
      throw new CustomError(404, `Wallet with address ${input.address} not found`);
@@ -35,20 +29,14 @@ export class TransactionController {
 
    // Check transaction outputs
    for (const output of tx.txOutputs) {
-    const w = await WalletHandler.getWallet(output.address);
+    const w = await Wallet.getWallet(output.address);
 
     if (!w)
      throw new CustomError(404, `Wallet with address ${output.address} not found`);
    }
 
    // Create transaction
-   const tx2 = await TransactionHandler.createTx(tx);
-
-   // Close transaction connection
-   await TransactionHandler.close();
-
-   // Close wallet connection
-   await WalletHandler.close();
+   const tx2 = await TX.createTx(tx);
 
    res.status(201).json({
     statusCode: 201,
@@ -64,17 +52,11 @@ export class TransactionController {
 
  static async getAllTransactionsByInput(req: express.Request, res: express.Response) {
   try {
-   // Open connection
-   await TransactionHandler.init();
-
    // Get address
    const { address } = req.params;
 
    // Find transactions
-   const txs = await TransactionHandler.getAllTxsByInputAddress(address);
-
-  // Close connection
-  await TransactionHandler.close();
+   const txs = await TX.getAllTxsByInputAddress(address);
 
   res.status(200).json({
    statusCode: 200,
@@ -90,17 +72,11 @@ export class TransactionController {
 
  static async getAllTransactionsByOutput(req: express.Request, res: express.Response) {
   try {
-   // Open connection
-   await TransactionHandler.init();
-
    // Get address
    const { address } = req.params;
 
    // Find transactions
-   const txs = await TransactionHandler.getAllTxsByOutputAddress(address);
-
-  // Close connection
-  await TransactionHandler.close();
+   const txs = await TX.getAllTxsByOutputAddress(address);
 
   res.status(200).json({
    statusCode: 200,

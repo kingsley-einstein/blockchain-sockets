@@ -18,4 +18,8 @@ export class FS {
  static fileRead(file: string) {
   return Tokenizer.decode(fs.readFileSync(FS.dir("../../storage") + "/" + file).toString());
  }
+
+ static fileExists(file: string) {
+  return fs.existsSync(FS.dir("../../storage") + "/" + file);
+ }
 }

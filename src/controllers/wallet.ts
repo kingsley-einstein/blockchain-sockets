@@ -1,13 +1,10 @@
 import express from "express";
-import { WalletHandler } from "../handlers";
+import { Wallet } from "../cache";
 import { CustomError } from "../custom";
 
 export class WalletController {
  static async create(req: express.Request, res: express.Response) {
   try {
-   // Initialize the client
-   await WalletHandler.init();
-
    // Get request body
    const { body } = req;
 
@@ -25,17 +22,10 @@ export class WalletController {
     phrase += p + " ";
 
    // Create wallet
-   const w = await WalletHandler.createWallet(phrase);
+   const w = await Wallet.createWallet(phrase);
 
    // API response
-   const response = {
-    address: w.address,
-    publicKey: w.publicKey,
-    balance: w.balance
-   };
-
-   // Close connection
-   await WalletHandler.close();
+   const response = { ...w };
 
    // Send API response
    res.status(201).json({
@@ -52,27 +42,18 @@ export class WalletController {
 
  static async getWallet(req: express.Request, res: express.Response) {
   try {
-   // Open connection
-   await WalletHandler.init();
 
    // Get wallet address
    const { address } = req.params;
 
    // Get wallet by address
-   const w = await WalletHandler.getWallet(address);
+   const w = await Wallet.getWallet(address);
 
    if (!w)
     throw new CustomError(404, "Wallet not found");
 
    // API response
-   const response = {
-    publicKey: w.publicKey,
-    address: w.address,
-    balance: w.balance
-   };
-
-   // Close connection
-   await WalletHandler.close();
+   const response = { ...w };
 
    // Send API response
    res.status(200).json({
@@ -89,27 +70,17 @@ export class WalletController {
 
  static async importWallet(req: express.Request, res: express.Response) {
   try {
-   // Open connection
-   await WalletHandler.init();
-
    // Recovery phrase
    const { phrase } = req.body;
 
    // Imported wallet
-   const w = await WalletHandler.importWallet(phrase);
+   const w = await Wallet.importWallet(phrase);
 
    if (!w)
     throw new CustomError(404, "Wallet not found.");
 
    // API response
-   const response = {
-    address: w.address,
-    publicKey: w.publicKey,
-    balance: w.balance
-   };
-
-   // Close connection
-   await WalletHandler.close();
+   const response = { ...w };
 
    res.status(200).json({
     statusCode: 200,

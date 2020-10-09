@@ -37,19 +37,21 @@ export class TransactionHandler {
   
   await this.map.put(t.txId, t, 0);
 
-  let txsFromFile: Array<Transaction> = JSON.parse((<string> FS.fileRead(txsFile)));
+  let txsFromFile: Array<Transaction> = (<any> FS.fileRead(txsFile)).transactions;
 
   const t2: Transaction = await this.map.get(t.txId);
 
   txsFromFile = [...txsFromFile, t2];
 
-  FS.fileWrite(txsFile, JSON.stringify(txsFromFile));
+  FS.fileWrite(txsFile, JSON.stringify({
+   transactions: txsFromFile
+  }));
   
   return Promise.resolve(t2);
  }
 
  async getTx(txId: string): Promise<Transaction> {
-  const txsFromFile: Array<Transaction> = JSON.parse((<string> FS.fileRead(txsFile)));
+  const txsFromFile: Array<Transaction> = (<any> FS.fileRead(txsFile)).transactions;
 
   for (const tx of txsFromFile)
    await this.map.put(tx.txId, tx, 0);
@@ -60,7 +62,7 @@ export class TransactionHandler {
  }
 
  async getPendingTxs(): Promise<Array<Transaction>> {
-  const txsFromFile: Array<Transaction> = JSON.parse((<string> FS.fileRead(txsFile)));
+  const txsFromFile: Array<Transaction> = (<any> FS.fileRead(txsFile)).transactions;
   
   for (const tx of txsFromFile)
    await this.map.put(tx.txId, tx, 0);
@@ -73,7 +75,7 @@ export class TransactionHandler {
  }
 
  async getDeclinedTxs(): Promise<Array<Transaction>> {
-  const txsFromFile: Array<Transaction> = JSON.parse((<string> FS.fileRead(txsFile)));
+  const txsFromFile: Array<Transaction> = (<any> FS.fileRead(txsFile)).transactions;
   
   for (const tx of txsFromFile)
    await this.map.put(tx.txId, tx, 0);
@@ -86,7 +88,7 @@ export class TransactionHandler {
  }
 
  async getAcceptedTxs(): Promise<Array<Transaction>> {
-  const txsFromFile: Array<Transaction> = JSON.parse((<string> FS.fileRead(txsFile)));
+  const txsFromFile: Array<Transaction> = (<any> FS.fileRead(txsFile)).transactions;
   
   for (const tx of txsFromFile)
    await this.map.put(tx.txId, tx, 0);
@@ -99,7 +101,7 @@ export class TransactionHandler {
  }
 
  async getAllTxs(): Promise<Array<Transaction>> {
-  const txsFromFile: Array<Transaction> = JSON.parse((<string> FS.fileRead(txsFile)));
+  const txsFromFile: Array<Transaction> = (<any> FS.fileRead(txsFile)).transactions;
   
   for (const tx of txsFromFile)
    await this.map.put(tx.txId, tx, 0);
@@ -111,7 +113,7 @@ export class TransactionHandler {
  }
 
  async approveTx(tx: Transaction, w: Wallet): Promise<Transaction> {
-  let txsFromFile: Array<Transaction> = JSON.parse((<string> FS.fileRead(txsFile)));
+  let txsFromFile: Array<Transaction> = (<any> FS.fileRead(txsFile)).transactions;
 
   for (const tx of txsFromFile)
    await this.map.put(tx.txId, tx, 0);
@@ -119,17 +121,20 @@ export class TransactionHandler {
   tx.txStatus = "approved";
   const tx1 = await this.signTx(tx, w);
   const tx2: Transaction = await this.map.put(tx1.txId, tx1, 0);
+  const tx3: Transaction = await this.map.get(tx1.txId);
 
   txsFromFile = txsFromFile.filter((t) => t.txId !== tx.txId);
-  txsFromFile = [...txsFromFile, tx2];
+  txsFromFile = [...txsFromFile, tx3];
 
-  FS.fileWrite(txsFile, JSON.stringify(txsFile));
+  FS.fileWrite(txsFile, JSON.stringify({
+   transactions: txsFromFile
+  }));
 
   return Promise.resolve(this.map.get(tx2.txId));
  }
 
  async getAllTxsByInputAddress(address: string): Promise<Array<Transaction>> {
-  const txsFromFile: Array<Transaction> = JSON.parse((<string> FS.fileRead(txsFile)));
+  const txsFromFile: Array<Transaction> = (<any> FS.fileRead(txsFile)).transactions;
 
   for (const tx of txsFromFile)
    await this.map.put(tx.txId, tx, 0);
@@ -144,7 +149,7 @@ export class TransactionHandler {
  }
 
  async getAllTxsByOutputAddress(address: string): Promise<Array<Transaction>> {
-  const txsFromFile: Array<Transaction> = JSON.parse((<string> FS.fileRead(txsFile)));
+  const txsFromFile: Array<Transaction> = (<any> FS.fileRead(txsFile)).transactions;
 
   for (const tx of txsFromFile)
    await this.map.put(tx.txId, tx, 0);
