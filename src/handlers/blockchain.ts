@@ -57,8 +57,9 @@ export class BChainHandler {
   for (const block0 of chainFromFile)
    await this.map.put(block0.hash, block0, 0);
 
-  const chain = (await this.map.entrySet())
-   .map(([, bx]) => bx);
+  const chain = (await this.map.values()).toArray();
+
+  // console.log(chain);
 
    const block1 = await this.calculateHash({
     ...b,
@@ -89,8 +90,9 @@ export class BChainHandler {
    await this.map.put(block.hash, block, 0);
 
   return Promise.resolve(
-   (await this.map.entrySet())
-    .map(([, block]) => block)
+   (await this.map.values())
+    .toArray()
+    .map((block) => ({ ...block }))
   );
  }
 }
