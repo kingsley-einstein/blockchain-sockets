@@ -12,5 +12,9 @@ export const sync = async () => {
  await Wallet.define(client);
  await TX.define(client);
 
+ process.on("beforeExit", async () => {
+  await client.shutdown();
+ });
+
  return client;
 };

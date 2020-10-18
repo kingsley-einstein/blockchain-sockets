@@ -23,11 +23,13 @@ export class BChainHandler {
  private async mineBlock(block: Block, difficulty: number): Promise<Block> {
   const chainFromFile: Array<Block> = (<any> FS.fileRead(chainFile)).blocks;
 
-  for (const bc of chainFromFile)
-   await this.map.put(bc.hash, bc, 0);
+  // await this.map.clear();
+
+  // for (const bc of chainFromFile)
+  //  await this.map.put(bc.hash, bc, 0);
   
-  const chain = (await this.map.entrySet())
-   .map(([, bx]) => bx);
+  // const chain = (await this.map.entrySet())
+  //  .map(([, bx]) => bx);
 
   // console.log(chain);
   
@@ -54,10 +56,14 @@ export class BChainHandler {
  async addBlock(b: Block): Promise<Block> {
   let chainFromFile: Array<Block> = (<any> FS.fileRead(chainFile)).blocks;
 
+  (await this.map.clear());
+
   for (const block0 of chainFromFile)
    await this.map.put(block0.hash, block0, 0);
 
-  const chain = (await this.map.values()).toArray();
+  const chain = (await this.map.values())
+   .toArray()
+   .reverse();
 
   // console.log(chain);
 
@@ -75,6 +81,8 @@ export class BChainHandler {
    blocks: chainFromFile
   }));
 
+  (await this.map.clear());
+
   for (const block0 of chainFromFile)
    await this.map.put(block0.hash, block0, 0);
 
@@ -86,6 +94,8 @@ export class BChainHandler {
  async getChain(): Promise<Array<Block>> {
   const chainFromFile: Array<Block> = (<any> FS.fileRead(chainFile)).blocks;
 
+  (await this.map.clear());
+
   for (const block of chainFromFile)
    await this.map.put(block.hash, block, 0);
 
@@ -93,6 +103,7 @@ export class BChainHandler {
    (await this.map.values())
     .toArray()
     .map((block) => ({ ...block }))
+    .reverse()
   );
  }
 }
